@@ -12,10 +12,11 @@ import {
   ChevronDown,
   Filter,
 } from 'lucide-react';
-import { stores, dataCompletenessIssues } from '../mock/stores';
+import { Drawer, Button } from 'antd';
 import { storeRankingData } from '../mock/reports';
 import { exportStoreRanking } from '../utils/export';
 import { getRankBadgeColor } from '../utils/format';
+import { useDataStore } from '../store/useDataStore';
 import BarChart from '../components/charts/BarChart';
 
 type SortField = 'newCustomers' | 'conversionRate' | 'avgWaitTime' | 'dataCompleteness';
@@ -130,6 +131,13 @@ const SortableHeader: React.FC<{
 const StoreCompare: React.FC = () => {
   const [sortField, setSortField] = useState<SortField>('newCustomers');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [drillDownState, setDrillDownState] = useState<{ storeName: string; field: string } | null>(null);
+
+  const { stores, dataCompletenessIssues, getMissingFieldCustomers, completeMissingField } = useDataStore();
+
+  const drillDownCustomers = drillDownState
+    ? getMissingFieldCustomers(drillDownState.storeName, drillDownState.field)
+    : [];
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -381,7 +389,11 @@ const StoreCompare: React.FC = () => {
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {issue.missingFields.map((field, i) => (
-                      <span key={i} className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded">
+                      <span
+                        key={i}
+                        className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded cursor-pointer hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
+                        onClick={() => setDrillDownState({ storeName: issue.storeName, field })}
+                      >
                         {field}
                       </span>
                     ))}
@@ -430,6 +442,62 @@ const StoreCompare: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <Drawer
+        title={drillDownState ? `${drillDownState.storeName} - ${drillDownState.field} 缺失顾客清单` : ''}
+        placement="right"
+        width={480}
+        open={drillDownState !== null}
+        onClose={() => setDrillDownState(null)}
+        styles={{
+          header: { background: '#1e293b', color: '#fff', borderBottom: '1px solid #334155' },
+          body: { background: '#0f172a', padding: 0 },
+        }}
+      >
+        {drillDownState && (
+          <div className="p-4">
+            {(() => {
+              const issue = dataCompletenessIssues.find((i) => i.storeName === drillDownState.storeName);
+              return issue ? (
+                <div className="flex items-center gap-2 mb-4 text-sm">
+                  <Users size={14} className="text-blue-400" />
+                  <span className="text-slate-400">负责前台:</span>
+                  <span className="text-blue-400 font-medium">{issue.responsiblePerson}</span>
+                </div>
+              ) : null;
+            })()}
+
+            <div className="space-y-2">
+              {drillDownCustomers.length === 0 ? (
+                <div className="text-center text-slate-500 py-8">暂无缺失该字段的顾客</div>
+              ) : (
+                drillDownCustomers.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50"
+                  >
+                    <div className="flex-1">
+                      <div className="text-white text-sm font-medium">{customer.customerName}</div>
+                      <div className="text-slate-400 text-xs mt-1">负责前台: {customer.responsiblePerson}</div>
+                    </div>
+                    {customer.completed ? (
+                      <span className="text-slate-500 text-sm">✓已补录</span>
+                    ) : (
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={() => completeMissingField(customer.id)}
+                      >
+                        补录
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 };

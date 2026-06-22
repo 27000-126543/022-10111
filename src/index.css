@@ -178,3 +178,24 @@ body {
   background: rgba(22, 93, 255, 0.3);
   color: #fff;
 }
+
+.ant-drawer-content {
+  background: #1E293B !important;
+}
+
+.ant-drawer-header {
+  background: #0F172A !important;
+  border-bottom: 1px solid rgba(71, 85, 105, 0.5) !important;
+}
+
+.ant-drawer-title {
+  color: #fff !important;
+}
+
+.ant-drawer-close {
+  color: #94A3B8 !important;
+}
+
+.ant-drawer-close:hover {
+  color: #fff !important;
+}

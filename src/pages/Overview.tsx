@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { AlertCircle, Clock, MapPin, User, ChevronRight, Bell, Building2, Users, TrendingUp, TrendingDown } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Drawer } from 'antd';
+import { AlertCircle, Clock, MapPin, User, ChevronRight, Bell, Building2, Users, TrendingUp, TrendingDown, X, CheckCircle2 } from 'lucide-react';
 import { useDataStore } from '../store/useDataStore';
 import KpiCard from '../components/KpiCard';
 import LineChart from '../components/charts/LineChart';
@@ -16,7 +17,11 @@ const Overview: React.FC = () => {
     selectedTimeRange,
     setSelectedTimeRange,
     stores,
+    storeCustomers,
+    getStoreCustomers,
   } = useDataStore();
+
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
 
   const trendData = selectedTimeRange === '7d' ? trendData7Days : trendData30Days;
 
@@ -119,6 +124,7 @@ const Overview: React.FC = () => {
             return (
               <div
                 key={store.id}
+                onClick={() => setSelectedStore(store.name)}
                 className={`relative rounded-xl p-3 border transition-all hover:scale-105 cursor-pointer ${
                   isRedLight
                     ? 'bg-rose-500/10 border-rose-500/50'
@@ -276,6 +282,107 @@ const Overview: React.FC = () => {
           height={320}
         />
       </div>
+
+      <Drawer
+        open={!!selectedStore}
+        onClose={() => setSelectedStore(null)}
+        width={520}
+        placement="right"
+        closeIcon={<X size={18} className="text-slate-400" />}
+        styles={{
+          content: { background: '#1E293B' },
+          header: { background: '#0F172A', borderBottom: '1px solid rgba(71,85,105,0.5)' },
+          body: { background: '#1E293B', padding: 0 },
+        }}
+        title={
+          selectedStore ? (
+            <div className="flex items-center gap-3">
+              <Building2 size={18} className="text-blue-400" />
+              <span className="text-white font-semibold">{selectedStore}</span>
+              <span className="text-slate-400 text-sm font-normal">
+                今日初诊 {getStoreCustomers(selectedStore).length} 人
+              </span>
+            </div>
+          ) : null
+        }
+      >
+        {selectedStore && (() => {
+          const customers = getStoreCustomers(selectedStore);
+          const dangerList = customers.filter((c) => c.status === 'danger');
+          const warningList = customers.filter((c) => c.status === 'warning');
+          const normalList = customers.filter((c) => c.status === 'normal');
+
+          const groups = [
+            { key: 'danger', label: '超时等待', list: dangerList, icon: AlertCircle, color: 'rose' as const, borderColor: 'border-rose-500/50', bgColor: 'bg-rose-500/10', textColor: 'text-rose-400', pulseBorder: 'animate-pulse border-2 border-rose-500' },
+            { key: 'warning', label: '等待预警', list: warningList, icon: Clock, color: 'amber' as const, borderColor: 'border-amber-500/50', bgColor: 'bg-amber-500/10', textColor: 'text-amber-400', pulseBorder: 'border-2 border-amber-500/70' },
+            { key: 'normal', label: '正常等候', list: normalList, icon: CheckCircle2, color: 'emerald' as const, borderColor: 'border-emerald-500/50', bgColor: 'bg-emerald-500/10', textColor: 'text-emerald-400', pulseBorder: 'border-2 border-emerald-500/40' },
+          ];
+
+          return (
+            <div className="p-4 space-y-5">
+              {groups.map((group) => (
+                <div key={group.key}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <group.icon size={16} className={group.textColor} />
+                    <span className={`text-sm font-semibold ${group.textColor}`}>{group.label}</span>
+                    <span className="text-xs text-slate-500 ml-1">{group.list.length} 人</span>
+                  </div>
+                  {group.list.length === 0 ? (
+                    <div className="text-xs text-slate-500 py-2 pl-6">暂无</div>
+                  ) : (
+                    <div className="space-y-2 pl-1">
+                      {group.list.map((customer) => (
+                        <div
+                          key={customer.id}
+                          className={`rounded-xl p-4 bg-slate-800/60 ${group.borderColor} ${group.key === 'danger' ? 'animate-pulse' : ''} transition-all`}
+                          style={group.key === 'danger' ? { boxShadow: '0 0 12px rgba(244,63,94,0.15)' } : undefined}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
+                                <User size={14} className="text-slate-300" />
+                              </div>
+                              <span className="text-white font-medium text-sm">{customer.name}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${group.bgColor} ${group.textColor}`}>
+                                {group.label}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Clock size={12} className={group.textColor} />
+                              <span className={`text-lg font-bold ${group.textColor}`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                                {customer.waitTime}
+                              </span>
+                              <span className="text-slate-500 text-xs">分钟</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <MapPin size={11} className="text-slate-500" />
+                              <span className="text-slate-400">{customer.projectType}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock size={11} className="text-slate-500" />
+                              <span className="text-slate-400">签到 {customer.signInTime}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <User size={11} className="text-slate-500" />
+                              <span className="text-slate-400">{customer.consultant}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <ChevronRight size={11} className="text-slate-500" />
+                              <span className="text-slate-400">{customer.nextStep}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </Drawer>
     </div>
   );
 };

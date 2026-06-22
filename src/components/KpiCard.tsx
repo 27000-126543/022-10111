@@ -95,7 +95,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ data, delay = 0 }) => {
         <div className={`flex items-center gap-1 text-xs font-medium ${
           isGoodTrend ? 'text-emerald-400' : 'text-rose-400'
         }`}>
-          {isGoodTrend ? (
+          {isPositive ? (
             <TrendingUp size={14} />
           ) : (
             <TrendingDown size={14} />
@@ -128,7 +128,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ data, delay = 0 }) => {
       </div>
 
       <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-        <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: data.color || '#165DFF' }} />
+        <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: isGoodTrend ? '#00B42A' : '#F53F3F' }} />
         <span>较昨日{trendDirectionText}{formatNumber(Math.abs(data.trend), 1)}%</span>
       </div>
     </div>

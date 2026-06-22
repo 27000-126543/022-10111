@@ -41,7 +41,7 @@ interface StoreRankingItem {
 }
 
 const Report: React.FC = () => {
-  const { selectedProjectCategory, setSelectedProjectCategory, getFunnelDataByCategory, getNodeTimeDataByCategory, doctors, consultants } = useDataStore();
+  const { selectedProjectCategory, setSelectedProjectCategory, getFunnelDataByCategory, getNodeTimeDataByCategory, doctors, consultants, compareCategoryA, compareCategoryB, setCompareCategoryA, setCompareCategoryB, getFunnelDataForCategory, getNodeTimeDataForCategory } = useDataStore();
   const [storeRankingSortField, setStoreRankingSortField] = useState<string>('score');
   const [storeRankingSortOrder, setStoreRankingSortOrder] = useState<'ascend' | 'descend'>('descend');
 
@@ -51,6 +51,14 @@ const Report: React.FC = () => {
         value: value as ProjectCategory,
         label,
       })),
+    []
+  );
+
+  const compareOptions = useMemo(
+    () =>
+      Object.entries(ProjectCategoryLabels)
+        .filter(([key]) => key !== 'all')
+        .map(([value, label]) => ({ value: value as ProjectCategory, label })),
     []
   );
 
@@ -73,6 +81,20 @@ const Report: React.FC = () => {
       },
     ],
   }), [nodeTimeData]);
+
+  const compareFunnelA = useMemo(() => getFunnelDataForCategory(compareCategoryA), [compareCategoryA, getFunnelDataForCategory]);
+  const compareFunnelB = useMemo(() => getFunnelDataForCategory(compareCategoryB), [compareCategoryB, getFunnelDataForCategory]);
+  const compareNodeTimeA = useMemo(() => getNodeTimeDataForCategory(compareCategoryA), [compareCategoryA, getNodeTimeDataForCategory]);
+  const compareNodeTimeB = useMemo(() => getNodeTimeDataForCategory(compareCategoryB), [compareCategoryB, getNodeTimeDataForCategory]);
+
+  const compareDiffData = useMemo(() => {
+    const mapB = new Map(compareNodeTimeB.map((d: NodeTimeData) => [d.node, d.avgTime]));
+    return compareNodeTimeA.map((d: NodeTimeData) => {
+      const timeB = mapB.get(d.node) ?? 0;
+      const diff = d.avgTime - timeB;
+      return { node: d.node, timeA: d.avgTime, timeB, diff };
+    });
+  }, [compareNodeTimeA, compareNodeTimeB]);
 
   const getComparisonColor = (comparison: number): string => {
     return comparison > 0 ? 'text-rose-400' : 'text-emerald-400';
@@ -413,6 +435,93 @@ const Report: React.FC = () => {
             </span>
           </div>
           <FunnelChart data={funnelData} height={320} />
+        </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-white font-semibold flex items-center gap-2">
+              <BarChart3 size={18} className="text-[#722ED1]" />
+              成交路径对比
+            </h3>
+            <p className="text-slate-400 text-sm mt-1">
+              选择两个项目分类并排对比漏斗与节点耗时差异
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Select
+              value={compareCategoryA}
+              onChange={setCompareCategoryA}
+              options={compareOptions}
+              className="w-40"
+              size="small"
+              style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)' }}
+              popupClassName="!bg-slate-800 !border-slate-700"
+            />
+            <span className="text-slate-500 text-sm">VS</span>
+            <Select
+              value={compareCategoryB}
+              onChange={setCompareCategoryB}
+              options={compareOptions}
+              className="w-40"
+              size="small"
+              style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)' }}
+              popupClassName="!bg-slate-800 !border-slate-700"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div>
+            <h4 className="text-slate-300 text-sm font-medium mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#722ED1]" />
+              {ProjectCategoryLabels[compareCategoryA]}
+            </h4>
+            <FunnelChart data={compareFunnelA} height={280} />
+          </div>
+          <div>
+            <h4 className="text-slate-300 text-sm font-medium mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#165DFF]" />
+              {ProjectCategoryLabels[compareCategoryB]}
+            </h4>
+            <FunnelChart data={compareFunnelB} height={280} />
+          </div>
+        </div>
+
+        <div className="bg-slate-900/60 rounded-lg p-4">
+          <h4 className="text-slate-300 text-sm font-medium mb-3">节点耗时差异对比</h4>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-slate-400 border-b border-slate-700/50">
+                <th className="text-left py-2 font-medium">环节</th>
+                <th className="text-right py-2 font-medium">{ProjectCategoryLabels[compareCategoryA]}耗时</th>
+                <th className="text-right py-2 font-medium">{ProjectCategoryLabels[compareCategoryB]}耗时</th>
+                <th className="text-right py-2 font-medium">差异值</th>
+              </tr>
+            </thead>
+            <tbody>
+              {compareDiffData.map((row) => (
+                <tr key={row.node} className="border-b border-slate-700/30 last:border-0">
+                  <td className="py-2.5 text-white">{row.node}</td>
+                  <td className="py-2.5 text-right text-slate-300" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {row.timeA.toFixed(1)} <span className="text-slate-500 text-xs">分钟</span>
+                  </td>
+                  <td className="py-2.5 text-right text-slate-300" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {row.timeB.toFixed(1)} <span className="text-slate-500 text-xs">分钟</span>
+                  </td>
+                  <td
+                    className={`py-2.5 text-right ${Math.abs(row.diff) > 5 ? 'font-bold' : ''} ${
+                      row.diff > 0 ? 'text-rose-400' : row.diff < 0 ? 'text-emerald-400' : 'text-slate-500'
+                    }`}
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  >
+                    {row.diff > 0 ? '+' : ''}{row.diff.toFixed(1)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

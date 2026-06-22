@@ -7,7 +7,7 @@ import {
   trendData30Days,
   headerStats,
 } from '../mock/overview';
-import { stores, dataCompletenessIssues } from '../mock/stores';
+import { stores, dataCompletenessIssues, storeCustomers, missingFieldCustomers } from '../mock/stores';
 import { doctors, consultants, heatmapData } from '../mock/doctors';
 import { projectIntents, radarIndicators, funnelData, categoryFunnelData } from '../mock/projects';
 import { warnings, warningStats, reassignmentAbnormal, highRiskCustomers } from '../mock/warnings';
@@ -18,7 +18,7 @@ import {
   scheduleSuggestions,
   storeRankingData,
 } from '../mock/reports';
-import type { WarningItem, ProjectCategory } from '../types';
+import type { WarningItem, ProjectCategory, MissingFieldCustomer } from '../types';
 
 interface DataState {
   headerStats: typeof headerStats;
@@ -29,6 +29,8 @@ interface DataState {
   trendData30Days: typeof trendData30Days;
   stores: typeof stores;
   dataCompletenessIssues: typeof dataCompletenessIssues;
+  storeCustomers: typeof storeCustomers;
+  missingFieldCustomers: MissingFieldCustomer[];
   doctors: typeof doctors;
   consultants: typeof consultants;
   heatmapData: typeof heatmapData;
@@ -48,12 +50,21 @@ interface DataState {
   
   selectedTimeRange: '7d' | '30d';
   selectedProjectCategory: ProjectCategory;
+  compareCategoryA: ProjectCategory;
+  compareCategoryB: ProjectCategory;
   
   setSelectedTimeRange: (range: '7d' | '30d') => void;
   setSelectedProjectCategory: (category: ProjectCategory) => void;
+  setCompareCategoryA: (category: ProjectCategory) => void;
+  setCompareCategoryB: (category: ProjectCategory) => void;
   updateWarningStatus: (id: string, status: WarningItem['status']) => void;
   getFunnelDataByCategory: () => typeof funnelData;
   getNodeTimeDataByCategory: () => typeof nodeTimeData;
+  getFunnelDataForCategory: (category: ProjectCategory) => typeof funnelData;
+  getNodeTimeDataForCategory: (category: ProjectCategory) => typeof nodeTimeData;
+  completeMissingField: (id: string) => void;
+  getStoreCustomers: (storeName: string) => typeof storeCustomers;
+  getMissingFieldCustomers: (storeName: string, field: string) => MissingFieldCustomer[];
 }
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -65,6 +76,8 @@ export const useDataStore = create<DataState>((set, get) => ({
   trendData30Days,
   stores,
   dataCompletenessIssues,
+  storeCustomers,
+  missingFieldCustomers,
   doctors,
   consultants,
   heatmapData,
@@ -84,9 +97,13 @@ export const useDataStore = create<DataState>((set, get) => ({
   
   selectedTimeRange: '7d',
   selectedProjectCategory: 'all',
+  compareCategoryA: 'breast',
+  compareCategoryB: 'body-shaping',
   
   setSelectedTimeRange: (range) => set({ selectedTimeRange: range }),
   setSelectedProjectCategory: (category) => set({ selectedProjectCategory: category }),
+  setCompareCategoryA: (category) => set({ compareCategoryA: category }),
+  setCompareCategoryB: (category) => set({ compareCategoryB: category }),
   
   updateWarningStatus: (id, status) =>
     set((state) => ({
@@ -111,5 +128,69 @@ export const useDataStore = create<DataState>((set, get) => ({
     const { selectedProjectCategory, nodeTimeData, categoryNodeTimeData } = get();
     if (selectedProjectCategory === 'all') return nodeTimeData;
     return categoryNodeTimeData[selectedProjectCategory] || nodeTimeData;
+  },
+
+  getFunnelDataForCategory: (category: ProjectCategory) => {
+    const { funnelData, categoryFunnelData } = get();
+    if (category === 'all') return funnelData;
+    return categoryFunnelData[category] || funnelData;
+  },
+
+  getNodeTimeDataForCategory: (category: ProjectCategory) => {
+    const { nodeTimeData, categoryNodeTimeData } = get();
+    if (category === 'all') return nodeTimeData;
+    return categoryNodeTimeData[category] || nodeTimeData;
+  },
+
+  completeMissingField: (id: string) => {
+    set((state) => {
+      const updated = state.missingFieldCustomers.map((c) =>
+        c.id === id ? { ...c, completed: true } : c
+      );
+      const storeFieldCount = new Map<string, number>();
+      updated.forEach((c) => {
+        if (!c.completed) {
+          const key = `${c.storeName}__${c.missingField}`;
+          storeFieldCount.set(key, (storeFieldCount.get(key) || 0) + 1);
+        }
+      });
+      const newIssues = state.dataCompletenessIssues.map((issue) => {
+        const remainingFields = issue.missingFields.filter((field) => {
+          const key = `${issue.storeName}__${field}`;
+          return (storeFieldCount.get(key) || 0) > 0;
+        });
+        const completedCount = issue.missingFields.length - remainingFields.length;
+        return {
+          ...issue,
+          missingFields: remainingFields,
+          missingCount: Math.max(0, issue.missingCount - completedCount),
+        };
+      }).filter((issue) => issue.missingFields.length > 0);
+
+      const updatedStores = state.stores.map((store) => {
+        const storeIssues = newIssues.filter((i) => i.storeName === store.name);
+        if (storeIssues.length === 0) {
+          const original = stores.find((s) => s.id === store.id);
+          return { ...store, dataCompleteness: Math.min(100, original ? original.dataCompleteness + 5 : store.dataCompleteness) };
+        }
+        return store;
+      });
+
+      return {
+        missingFieldCustomers: updated,
+        dataCompletenessIssues: newIssues,
+        stores: updatedStores,
+      };
+    });
+  },
+
+  getStoreCustomers: (storeName: string) => {
+    return get().storeCustomers.filter((c) => c.storeName === storeName);
+  },
+
+  getMissingFieldCustomers: (storeName: string, field: string) => {
+    return get().missingFieldCustomers.filter(
+      (c) => c.storeName === storeName && c.missingField === field && !c.completed
+    );
   },
 }));

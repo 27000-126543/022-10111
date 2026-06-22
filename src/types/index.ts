@@ -29,6 +29,28 @@ export interface WaitingCustomer {
   status: 'normal' | 'warning' | 'danger';
   signInTime: string;
   consultant?: string;
+  nextStep?: string;
+}
+
+export interface StoreCustomer {
+  id: string;
+  name: string;
+  storeName: string;
+  projectType: string;
+  signInTime: string;
+  waitTime: number;
+  status: 'normal' | 'warning' | 'danger';
+  consultant: string;
+  nextStep: string;
+}
+
+export interface MissingFieldCustomer {
+  id: string;
+  customerName: string;
+  storeName: string;
+  missingField: string;
+  responsiblePerson: string;
+  completed: boolean;
 }
 
 export interface Doctor {
