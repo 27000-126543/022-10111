@@ -70,6 +70,9 @@ interface DataState {
   markCustomerAsSeen: (customerId: string) => void;
   reassignCustomer: (customerId: string, consultant: string) => void;
   addCustomerNote: (customerId: string, note: string) => void;
+  batchMarkAsSeen: (customerIds: string[]) => void;
+  batchReassignCustomer: (customerIds: string[], consultant: string) => void;
+  batchAddNote: (customerIds: string[], note: string) => void;
 }
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -316,6 +319,78 @@ export const useDataStore = create<DataState>((set, get) => ({
     set((state) => {
       const updatedStoreCustomers = state.storeCustomers.map((c) =>
         c.id === customerId
+          ? { ...c, note }
+          : c
+      );
+
+      return {
+        storeCustomers: updatedStoreCustomers,
+      };
+    });
+  },
+
+  batchMarkAsSeen: (customerIds: string[]) => {
+    set((state) => {
+      const updatedStoreCustomers = state.storeCustomers.map((c) =>
+        customerIds.includes(c.id)
+          ? { ...c, status: 'normal' as const, waitTime: 0, nextStep: '已接诊' }
+          : c
+      );
+
+      const updatedWaitingCustomers = state.waitingCustomers.filter(
+        (c) => !customerIds.includes(c.id)
+      );
+
+      const affectedStores = new Set<string>();
+      state.storeCustomers.forEach((c) => {
+        if (customerIds.includes(c.id)) {
+          affectedStores.add(c.storeName);
+        }
+      });
+
+      const updatedStores = state.stores.map((store) => {
+        if (!affectedStores.has(store.name)) return store;
+        const storeCustomersAfter = updatedStoreCustomers.filter((c) => c.storeName === store.name);
+        const totalWaitTime = storeCustomersAfter.reduce((sum, c) => sum + c.waitTime, 0);
+        const avgWaitTime = storeCustomersAfter.length > 0
+          ? Math.round(totalWaitTime / storeCustomersAfter.length)
+          : 0;
+        return { ...store, avgWaitTime };
+      });
+
+      return {
+        storeCustomers: updatedStoreCustomers,
+        waitingCustomers: updatedWaitingCustomers,
+        stores: updatedStores,
+      };
+    });
+  },
+
+  batchReassignCustomer: (customerIds: string[], consultant: string) => {
+    set((state) => {
+      const updatedStoreCustomers = state.storeCustomers.map((c) =>
+        customerIds.includes(c.id)
+          ? { ...c, consultant }
+          : c
+      );
+
+      const updatedWaitingCustomers = state.waitingCustomers.map((c) =>
+        customerIds.includes(c.id)
+          ? { ...c, consultant }
+          : c
+      );
+
+      return {
+        storeCustomers: updatedStoreCustomers,
+        waitingCustomers: updatedWaitingCustomers,
+      };
+    });
+  },
+
+  batchAddNote: (customerIds: string[], note: string) => {
+    set((state) => {
+      const updatedStoreCustomers = state.storeCustomers.map((c) =>
+        customerIds.includes(c.id)
           ? { ...c, note }
           : c
       );

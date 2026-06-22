@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Drawer } from 'antd';
-import { AlertCircle, Clock, MapPin, User, ChevronRight, Bell, Building2, Users, TrendingUp, TrendingDown, X, CheckCircle2, CheckCircle, RefreshCw, MessageSquare } from 'lucide-react';
+import { AlertCircle, Clock, MapPin, User, ChevronRight, Bell, Building2, Users, TrendingUp, TrendingDown, X, CheckCircle2, CheckCircle, RefreshCw, MessageSquare, CheckSquare, Square } from 'lucide-react';
 import { useDataStore } from '../store/useDataStore';
 import KpiCard from '../components/KpiCard';
 import LineChart from '../components/charts/LineChart';
@@ -22,9 +22,14 @@ const Overview: React.FC = () => {
     markCustomerAsSeen,
     reassignCustomer,
     addCustomerNote,
+    batchMarkAsSeen,
+    batchReassignCustomer,
+    batchAddNote,
   } = useDataStore();
 
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const trendData = selectedTimeRange === '7d' ? trendData7Days : trendData30Days;
 
@@ -93,6 +98,45 @@ const Overview: React.FC = () => {
     const note = window.prompt('请输入备注内容：');
     if (note && note.trim()) {
       addCustomerNote(customerId, note.trim());
+    }
+  };
+
+  const toggleSelect = (customerId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(customerId)) {
+        next.delete(customerId);
+      } else {
+        next.add(customerId);
+      }
+      return next;
+    });
+  };
+
+  const handleBatchMarkAsSeen = () => {
+    if (selectedIds.size === 0) return;
+    batchMarkAsSeen(Array.from(selectedIds));
+    setSelectedIds(new Set());
+    setBatchMode(false);
+  };
+
+  const handleBatchReassign = () => {
+    if (selectedIds.size === 0) return;
+    const newConsultant = window.prompt('请输入新咨询师姓名：');
+    if (newConsultant && newConsultant.trim()) {
+      batchReassignCustomer(Array.from(selectedIds), newConsultant.trim());
+      setSelectedIds(new Set());
+      setBatchMode(false);
+    }
+  };
+
+  const handleBatchAddNote = () => {
+    if (selectedIds.size === 0) return;
+    const note = window.prompt('请输入备注内容：');
+    if (note && note.trim()) {
+      batchAddNote(Array.from(selectedIds), note.trim());
+      setSelectedIds(new Set());
+      setBatchMode(false);
     }
   };
 
@@ -311,7 +355,11 @@ const Overview: React.FC = () => {
 
       <Drawer
         open={!!selectedStore}
-        onClose={() => setSelectedStore(null)}
+        onClose={() => {
+          setSelectedStore(null);
+          setBatchMode(false);
+          setSelectedIds(new Set());
+        }}
         width={520}
         placement="right"
         closeIcon={<X size={18} className="text-slate-400" />}
@@ -328,6 +376,19 @@ const Overview: React.FC = () => {
               <span className="text-slate-400 text-sm font-normal">
                 今日初诊 {currentStoreCustomers.length} 人
               </span>
+              <button
+                onClick={() => {
+                  setBatchMode(!batchMode);
+                  setSelectedIds(new Set());
+                }}
+                className={`ml-2 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  batchMode
+                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                    : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'
+                }`}
+              >
+                {batchMode ? '退出批量' : '批量处理'}
+              </button>
             </div>
           ) : null
         }
@@ -360,10 +421,26 @@ const Overview: React.FC = () => {
                       {group.list.map((customer) => (
                         <div
                           key={customer.id}
-                          className={`rounded-xl p-4 bg-slate-800/60 ${group.borderColor} ${group.key === 'danger' ? 'animate-pulse' : ''} transition-all`}
-                          style={group.key === 'danger' ? { boxShadow: '0 0 12px rgba(244,63,94,0.15)' } : undefined}
+                          onClick={() => batchMode && toggleSelect(customer.id)}
+                          className={`relative rounded-xl p-4 bg-slate-800/60 ${
+                            batchMode && selectedIds.has(customer.id)
+                              ? 'border-2 border-blue-500 shadow-lg shadow-blue-500/20'
+                              : group.borderColor
+                          } ${group.key === 'danger' && !(batchMode && selectedIds.has(customer.id)) ? 'animate-pulse' : ''} transition-all ${
+                            batchMode ? 'cursor-pointer hover:border-blue-400/60' : ''
+                          }`}
+                          style={group.key === 'danger' && !(batchMode && selectedIds.has(customer.id)) ? { boxShadow: '0 0 12px rgba(244,63,94,0.15)' } : undefined}
                         >
-                          <div className="flex items-start justify-between mb-2">
+                          {batchMode && (
+                            <div className="absolute top-3 left-3 z-10">
+                              {selectedIds.has(customer.id) ? (
+                                <CheckSquare size={18} className="text-blue-400" />
+                              ) : (
+                                <Square size={18} className="text-slate-500" />
+                              )}
+                            </div>
+                          )}
+                          <div className={`flex items-start justify-between mb-2 ${batchMode ? 'pl-7' : ''}`}>
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
                                 <User size={14} className="text-slate-300" />
@@ -381,7 +458,7 @@ const Overview: React.FC = () => {
                               <span className="text-slate-500 text-xs">分钟</span>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 text-xs">
+                          <div className={`grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 text-xs ${batchMode ? 'pl-7' : ''}`}>
                             <div className="flex items-center gap-1.5">
                               <MapPin size={11} className="text-slate-500" />
                               <span className="text-slate-400">{customer.projectType}</span>
@@ -400,7 +477,7 @@ const Overview: React.FC = () => {
                             </div>
                           </div>
                           {customer.note && (
-                            <div className="mt-3 p-2 rounded-lg bg-slate-700/30 border border-slate-600/30">
+                            <div className={`mt-3 p-2 rounded-lg bg-slate-700/30 border border-slate-600/30 ${batchMode ? 'ml-7' : ''}`}>
                               <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
                                 <MessageSquare size={11} />
                                 <span>备注</span>
@@ -408,35 +485,74 @@ const Overview: React.FC = () => {
                               <p className="text-xs text-slate-300">{customer.note}</p>
                             </div>
                           )}
-                          <div className="flex items-center justify-end gap-1 mt-3">
-                            <button
-                              onClick={() => handleMarkAsSeen(customer.id)}
-                              className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                              title="标记已接诊"
-                            >
-                              <CheckCircle size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleReassign(customer.id, customer.consultant)}
-                              className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
-                              title="转派咨询师"
-                            >
-                              <RefreshCw size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleAddNote(customer.id)}
-                              className="p-1.5 rounded-lg bg-slate-600/30 text-slate-400 hover:bg-slate-600/50 transition-colors"
-                              title="备注卡点原因"
-                            >
-                              <MessageSquare size={14} />
-                            </button>
-                          </div>
+                          {!batchMode && (
+                            <div className="flex items-center justify-end gap-1 mt-3">
+                              <button
+                                onClick={() => handleMarkAsSeen(customer.id)}
+                                className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                title="标记已接诊"
+                              >
+                                <CheckCircle size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleReassign(customer.id, customer.consultant)}
+                                className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+                                title="转派咨询师"
+                              >
+                                <RefreshCw size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleAddNote(customer.id)}
+                                className="p-1.5 rounded-lg bg-slate-600/30 text-slate-400 hover:bg-slate-600/50 transition-colors"
+                                title="备注卡点原因"
+                              >
+                                <MessageSquare size={14} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
               ))}
+              {batchMode && selectedIds.size > 0 && (
+                <div className="sticky bottom-0 left-0 right-0 z-50 -mx-4 -mb-5 mt-4">
+                  <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/50 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-300 font-medium">
+                        已选 <span className="text-blue-400 font-bold">{selectedIds.size}</span> 人
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleBatchMarkAsSeen}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-xs font-medium transition-colors"
+                        >
+                          批量标记已接诊
+                        </button>
+                        <button
+                          onClick={handleBatchReassign}
+                          className="px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 text-xs font-medium transition-colors"
+                        >
+                          批量转派咨询师
+                        </button>
+                        <button
+                          onClick={handleBatchAddNote}
+                          className="px-3 py-1.5 rounded-lg bg-slate-600/30 text-slate-400 hover:bg-slate-600/50 text-xs font-medium transition-colors"
+                        >
+                          批量备注
+                        </button>
+                        <button
+                          onClick={() => setSelectedIds(new Set())}
+                          className="px-3 py-1.5 rounded-lg bg-slate-700/50 text-slate-400 hover:bg-slate-700/70 text-xs font-medium transition-colors ml-1"
+                        >
+                          取消选择
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}

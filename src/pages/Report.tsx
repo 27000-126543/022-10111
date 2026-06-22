@@ -104,6 +104,56 @@ const Report: React.FC = () => {
     });
   }, [compareNodeTimeA, compareNodeTimeB]);
 
+  const bottleneckAnalysis = useMemo(() => {
+    let biggestDrop = { stage: '', dropRate: 0, categoryA: 0, categoryB: 0 };
+    for (let i = 1; i < compareFunnelA.length; i++) {
+      const dropA = compareFunnelA[i-1].conversionRate - compareFunnelA[i].conversionRate;
+      const dropB = compareFunnelB[i-1].conversionRate - compareFunnelB[i].conversionRate;
+      const maxDrop = Math.max(dropA, dropB);
+      if (maxDrop > biggestDrop.dropRate) {
+        biggestDrop = { stage: compareFunnelA[i].stage, dropRate: maxDrop, categoryA: dropA, categoryB: dropB };
+      }
+    }
+
+    let longestNode = { node: '', maxTime: 0, category: '', categoryA: 0, categoryB: 0 };
+    compareDiffData.forEach((row) => {
+      const maxOfTwo = Math.max(row.timeA, row.timeB);
+      if (maxOfTwo > longestNode.maxTime) {
+        longestNode = {
+          node: row.node,
+          maxTime: maxOfTwo,
+          category: row.timeA > row.timeB ? ProjectCategoryLabels[compareCategoryA] : ProjectCategoryLabels[compareCategoryB],
+          categoryA: row.timeA,
+          categoryB: row.timeB,
+        };
+      }
+    });
+
+    const suggestions: string[] = [];
+
+    if (biggestDrop.dropRate > 10) {
+      if (biggestDrop.categoryA > biggestDrop.categoryB) {
+        suggestions.push(`${ProjectCategoryLabels[compareCategoryA]}在"${biggestDrop.stage}"环节流失最严重（降幅${biggestDrop.categoryA.toFixed(1)}%），建议加强该环节的咨询师引导话术培训`);
+      } else {
+        suggestions.push(`${ProjectCategoryLabels[compareCategoryB]}在"${biggestDrop.stage}"环节流失最严重（降幅${biggestDrop.categoryB.toFixed(1)}%），建议优化该环节的顾客等待体验`);
+      }
+    }
+
+    if (longestNode.maxTime > 20) {
+      const diff = Math.abs(longestNode.categoryA - longestNode.categoryB);
+      if (diff > 5) {
+        suggestions.push(`"${longestNode.node}"耗时差异明显（${diff.toFixed(1)}分钟），建议参考耗时较短一方优化流程`);
+      }
+      suggestions.push(`"${longestNode.node}"整体耗时偏长（最长${longestNode.maxTime.toFixed(1)}分钟），${compareStore !== 'all' ? `建议${compareStore}增加该时段人手` : '建议高峰时段增派医生或咨询师'}`);
+    }
+
+    if (suggestions.length === 0) {
+      suggestions.push('当前对比分类各环节表现均衡，无明显卡点');
+    }
+
+    return { biggestDrop, longestNode, suggestions };
+  }, [compareFunnelA, compareFunnelB, compareDiffData, compareCategoryA, compareCategoryB, compareStore]);
+
   const getComparisonColor = (comparison: number): string => {
     return comparison > 0 ? 'text-rose-400' : 'text-emerald-400';
   };
@@ -544,6 +594,52 @@ const Report: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-4 bg-gradient-to-r from-amber-500/5 via-rose-500/5 to-purple-500/5 rounded-lg border border-amber-500/20 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap size={16} className="text-amber-400" />
+            <h4 className="text-amber-300 text-sm font-semibold">卡点分析</h4>
+            {compareStore !== 'all' && (
+              <span className="text-xs text-slate-400 ml-2">· {compareStore}</span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+            <div className="bg-slate-900/60 rounded-lg p-3">
+              <div className="text-xs text-rose-400 font-medium mb-1">漏斗最大流失点</div>
+              <div className="text-white text-sm font-semibold">{bottleneckAnalysis.biggestDrop.stage || '暂无'}</div>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-xs text-slate-400">
+                  {ProjectCategoryLabels[compareCategoryA]}: -{bottleneckAnalysis.biggestDrop.categoryA.toFixed(1)}%
+                </span>
+                <span className="text-xs text-slate-400">
+                  {ProjectCategoryLabels[compareCategoryB]}: -{bottleneckAnalysis.biggestDrop.categoryB.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+            <div className="bg-slate-900/60 rounded-lg p-3">
+              <div className="text-xs text-purple-400 font-medium mb-1">耗时最长节点</div>
+              <div className="text-white text-sm font-semibold">{bottleneckAnalysis.longestNode.node || '暂无'}</div>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-xs text-slate-400">
+                  {ProjectCategoryLabels[compareCategoryA]}: {bottleneckAnalysis.longestNode.categoryA.toFixed(1)}分钟
+                </span>
+                <span className="text-xs text-slate-400">
+                  {ProjectCategoryLabels[compareCategoryB]}: {bottleneckAnalysis.longestNode.categoryB.toFixed(1)}分钟
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {bottleneckAnalysis.suggestions.map((suggestion, idx) => (
+              <div key={idx} className="flex items-start gap-2 text-sm">
+                <AlertCircle size={14} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                <span className="text-slate-300">{suggestion}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

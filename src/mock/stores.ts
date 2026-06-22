@@ -128,3 +128,51 @@ export const missingFieldCustomers: MissingFieldCustomer[] = [
   { id: 'mf9', customerName: '钱女士', storeName: '南京鼓楼店', missingField: '风险问卷', responsiblePerson: '郑思怡', completed: false },
   { id: 'mf10', customerName: '何女士', storeName: '南京鼓楼店', missingField: '知情同意书', responsiblePerson: '郑思怡', completed: false },
 ];
+
+export interface ReceptionistTrendItem {
+  name: string;
+  storeName: string;
+  daily: { date: string; newMissing: number; completed: number; remaining: number }[];
+}
+
+export const receptionistTrends: ReceptionistTrendItem[] = [
+  {
+    name: '周小琳',
+    storeName: '成都锦江店',
+    daily: [
+      { date: '06-16', newMissing: 2, completed: 1, remaining: 1 },
+      { date: '06-17', newMissing: 1, completed: 0, remaining: 2 },
+      { date: '06-18', newMissing: 3, completed: 2, remaining: 3 },
+      { date: '06-19', newMissing: 0, completed: 1, remaining: 2 },
+      { date: '06-20', newMissing: 2, completed: 1, remaining: 3 },
+      { date: '06-21', newMissing: 1, completed: 0, remaining: 4 },
+      { date: '06-22', newMissing: 2, completed: 0, remaining: 5 },
+    ],
+  },
+  {
+    name: '吴雨晴',
+    storeName: '广州天河店',
+    daily: [
+      { date: '06-16', newMissing: 1, completed: 1, remaining: 0 },
+      { date: '06-17', newMissing: 2, completed: 1, remaining: 1 },
+      { date: '06-18', newMissing: 0, completed: 0, remaining: 1 },
+      { date: '06-19', newMissing: 1, completed: 1, remaining: 1 },
+      { date: '06-20', newMissing: 1, completed: 0, remaining: 2 },
+      { date: '06-21', newMissing: 0, completed: 1, remaining: 1 },
+      { date: '06-22', newMissing: 2, completed: 0, remaining: 3 },
+    ],
+  },
+  {
+    name: '郑思怡',
+    storeName: '南京鼓楼店',
+    daily: [
+      { date: '06-16', newMissing: 1, completed: 0, remaining: 1 },
+      { date: '06-17', newMissing: 0, completed: 1, remaining: 0 },
+      { date: '06-18', newMissing: 2, completed: 1, remaining: 1 },
+      { date: '06-19', newMissing: 0, completed: 0, remaining: 1 },
+      { date: '06-20', newMissing: 1, completed: 0, remaining: 2 },
+      { date: '06-21', newMissing: 0, completed: 1, remaining: 1 },
+      { date: '06-22', newMissing: 1, completed: 0, remaining: 2 },
+    ],
+  },
+];

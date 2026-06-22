@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Drawer, Button } from 'antd';
 import { storeRankingData } from '../mock/reports';
+import { receptionistTrends } from '../mock/stores';
 import { exportStoreRanking } from '../utils/export';
 import { getRankBadgeColor } from '../utils/format';
 import { useDataStore } from '../store/useDataStore';
@@ -135,8 +136,17 @@ const StoreCompare: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [drillDownState, setDrillDownState] = useState<{ storeName: string; field: string } | null>(null);
   const [selectedReceptionist, setSelectedReceptionist] = useState<string | null>(null);
+  const [trendRange, setTrendRange] = useState<'today' | '7d'>('7d');
+  const [selectedTrendReceptionist, setSelectedTrendReceptionist] = useState<string>(receptionistTrends[0]?.name ?? '');
 
   const { stores, dataCompletenessIssues, missingFieldCustomers, getMissingFieldCustomers, completeMissingField } = useDataStore();
+
+  const storesWithIssues = useMemo(() => {
+    const issueStoreNames = new Set(dataCompletenessIssues.map(i => i.storeName));
+    const withIssues = stores.filter(s => issueStoreNames.has(s.name));
+    const withoutIssues = stores.filter(s => !issueStoreNames.has(s.name));
+    return [...withIssues, ...withoutIssues];
+  }, [stores, dataCompletenessIssues]);
 
   const drillDownCustomers = drillDownState
     ? getMissingFieldCustomers(drillDownState.storeName, drillDownState.field)
@@ -185,6 +195,36 @@ const StoreCompare: React.FC = () => {
     return missingFieldCustomers.filter((c) => c.responsiblePerson === selectedReceptionist);
   }, [selectedReceptionist, missingFieldCustomers]);
 
+  const todayReceptionistStats = useMemo(() => {
+    const grouped = new Map<string, { name: string; storeName: string; newMissing: number; completed: number; remaining: number }>();
+    missingFieldCustomers.forEach((c) => {
+      if (!grouped.has(c.responsiblePerson)) {
+        grouped.set(c.responsiblePerson, { name: c.responsiblePerson, storeName: c.storeName, newMissing: 0, completed: 0, remaining: 0 });
+      }
+      const stat = grouped.get(c.responsiblePerson)!;
+      if (c.completed) {
+        stat.completed += 1;
+      } else {
+        stat.newMissing += 1;
+        stat.remaining += 1;
+      }
+    });
+    return Array.from(grouped.values());
+  }, [missingFieldCustomers]);
+
+  const trendBarChartData = useMemo(() => {
+    const trend = receptionistTrends.find(t => t.name === selectedTrendReceptionist);
+    if (!trend) return { xData: [], yData: [] };
+    return {
+      xData: trend.daily.map(d => d.date),
+      yData: [
+        { name: '新增缺失', data: trend.daily.map(d => d.newMissing), color: '#F53F3F' },
+        { name: '已补录', data: trend.daily.map(d => d.completed), color: '#00B42A' },
+        { name: '剩余待补录', data: trend.daily.map(d => d.remaining), color: '#FF7D00' },
+      ],
+    };
+  }, [selectedTrendReceptionist]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -195,13 +235,17 @@ const StoreCompare: React.FC = () => {
   };
 
   const sortedRankingData = useMemo(() => {
-    const sorted = [...storeRankingData].sort((a, b) => {
+    const storeMap = new Map(stores.map(s => [s.name, s.dataCompleteness]));
+    const sorted = [...storeRankingData].map(item => ({
+      ...item,
+      dataCompleteness: storeMap.get(item.name) ?? item.dataCompleteness,
+    })).sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
       return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
     });
     return sorted.map((item, index) => ({ ...item, rank: index + 1 }));
-  }, [sortField, sortOrder]);
+  }, [sortField, sortOrder, stores]);
 
   const handleExport = () => {
     exportStoreRanking(storeRankingData, `门店排名_${new Date().toISOString().slice(0, 10)}`, dataCompletenessIssues);
@@ -400,8 +444,8 @@ const StoreCompare: React.FC = () => {
             </h3>
             <span className="text-xs text-slate-400">共 {stores.length} 家门店</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            {stores.slice(0, 4).map((store) => (
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            {storesWithIssues.map((store) => (
               <div
                 key={store.id}
                 className={`flex flex-col items-center p-4 rounded-xl border ${getCompletenessBg(store.dataCompleteness)} transition-all hover:scale-105`}
@@ -561,6 +605,91 @@ const StoreCompare: React.FC = () => {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-semibold flex items-center gap-2">
+            <TrendingUp size={18} className="text-purple-400" />
+            前台补录趋势
+          </h3>
+          <div className="flex bg-slate-800/50 rounded-lg p-1">
+            <button
+              onClick={() => setTrendRange('today')}
+              className={trendRange === 'today' ? 'bg-blue-500 text-white px-3 py-1 rounded-md text-xs' : 'text-slate-400 px-3 py-1 text-xs'}
+            >
+              今日
+            </button>
+            <button
+              onClick={() => setTrendRange('7d')}
+              className={trendRange === '7d' ? 'bg-blue-500 text-white px-3 py-1 rounded-md text-xs' : 'text-slate-400 px-3 py-1 text-xs'}
+            >
+              近7天
+            </button>
+          </div>
+        </div>
+
+        {trendRange === 'today' ? (
+          <div className="grid grid-cols-3 gap-4">
+            {todayReceptionistStats.map((stat) => (
+              <div
+                key={stat.name}
+                className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4 cursor-pointer hover:bg-slate-700/50 transition-colors"
+                onClick={() => setSelectedReceptionist(stat.name)}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-white font-medium text-sm">{stat.name}</span>
+                  <span className="text-slate-500 text-xs">{stat.storeName}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center">
+                    <div className="text-rose-400 font-bold text-lg" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {stat.newMissing}
+                    </div>
+                    <div className="text-slate-400 text-xs mt-1">新增缺失</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-emerald-400 font-bold text-lg" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {stat.completed}
+                    </div>
+                    <div className="text-slate-400 text-xs mt-1">已补录</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-amber-400 font-bold text-lg" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {stat.remaining}
+                    </div>
+                    <div className="text-slate-400 text-xs mt-1">待补录</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div>
+            <div className="flex gap-2 mb-4">
+              {receptionistTrends.map((trend) => (
+                <button
+                  key={trend.name}
+                  onClick={() => {
+                    setSelectedTrendReceptionist(trend.name);
+                    setSelectedReceptionist(trend.name);
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedTrendReceptionist === trend.name
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                      : 'bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:bg-slate-700/50'
+                  }`}
+                >
+                  {trend.name}
+                  <span className="text-xs ml-1 opacity-70">· {trend.storeName}</span>
+                </button>
+              ))}
+            </div>
+            {trendBarChartData.xData.length > 0 && (
+              <BarChart xData={trendBarChartData.xData} yData={trendBarChartData.yData} height={280} />
+            )}
+          </div>
+        )}
       </div>
 
       <Drawer
