@@ -1,0 +1,221 @@
+import type { NodeTimeData, ScriptData, ScheduleSuggestion } from '../types';
+
+export const nodeTimeData: NodeTimeData[] = [
+  {
+    node: '签到→分诊',
+    avgTime: 5,
+    projectType: 'all',
+    comparison: 0.8,
+    maxTime: 12,
+    minTime: 2,
+  },
+  {
+    node: '分诊→问卷',
+    avgTime: 8,
+    projectType: 'all',
+    comparison: -1.2,
+    maxTime: 18,
+    minTime: 3,
+  },
+  {
+    node: '问卷→咨询师',
+    avgTime: 12,
+    projectType: 'all',
+    comparison: 2.5,
+    maxTime: 25,
+    minTime: 5,
+  },
+  {
+    node: '咨询师→医生',
+    avgTime: 18,
+    projectType: 'all',
+    comparison: -0.5,
+    maxTime: 35,
+    minTime: 8,
+  },
+  {
+    node: '医生→成交',
+    avgTime: 45,
+    projectType: 'all',
+    comparison: 3.2,
+    maxTime: 80,
+    minTime: 20,
+  },
+];
+
+export const categoryNodeTimeData: Record<string, NodeTimeData[]> = {
+  rhinoplasty: [
+    { node: '签到→分诊', avgTime: 6, projectType: 'rhinoplasty', comparison: 1.2, maxTime: 15, minTime: 3 },
+    { node: '分诊→问卷', avgTime: 10, projectType: 'rhinoplasty', comparison: -0.8, maxTime: 22, minTime: 4 },
+    { node: '问卷→咨询师', avgTime: 15, projectType: 'rhinoplasty', comparison: 3.2, maxTime: 30, minTime: 6 },
+    { node: '咨询师→医生', avgTime: 22, projectType: 'rhinoplasty', comparison: 1.8, maxTime: 40, minTime: 10 },
+    { node: '医生→成交', avgTime: 55, projectType: 'rhinoplasty', comparison: 5.2, maxTime: 90, minTime: 25 },
+  ],
+  'skin-photoelectric': [
+    { node: '签到→分诊', avgTime: 4, projectType: 'skin-photoelectric', comparison: -0.5, maxTime: 10, minTime: 2 },
+    { node: '分诊→问卷', avgTime: 6, projectType: 'skin-photoelectric', comparison: -2.2, maxTime: 15, minTime: 3 },
+    { node: '问卷→咨询师', avgTime: 8, projectType: 'skin-photoelectric', comparison: -1.5, maxTime: 18, minTime: 4 },
+    { node: '咨询师→医生', avgTime: 12, projectType: 'skin-photoelectric', comparison: -3.2, maxTime: 22, minTime: 6 },
+    { node: '医生→成交', avgTime: 32, projectType: 'skin-photoelectric', comparison: -2.8, maxTime: 55, minTime: 18 },
+  ],
+  blepharoplasty: [
+    { node: '签到→分诊', avgTime: 5, projectType: 'blepharoplasty', comparison: 0.2, maxTime: 12, minTime: 2 },
+    { node: '分诊→问卷', avgTime: 8, projectType: 'blepharoplasty', comparison: -1.0, maxTime: 18, minTime: 3 },
+    { node: '问卷→咨询师', avgTime: 10, projectType: 'blepharoplasty', comparison: 0.5, maxTime: 22, minTime: 5 },
+    { node: '咨询师→医生', avgTime: 16, projectType: 'blepharoplasty', comparison: -0.8, maxTime: 30, minTime: 8 },
+    { node: '医生→成交', avgTime: 42, projectType: 'blepharoplasty', comparison: 2.1, maxTime: 70, minTime: 22 },
+  ],
+  injection: [
+    { node: '签到→分诊', avgTime: 3, projectType: 'injection', comparison: -1.5, maxTime: 8, minTime: 1 },
+    { node: '分诊→问卷', avgTime: 5, projectType: 'injection', comparison: -2.8, maxTime: 12, minTime: 2 },
+    { node: '问卷→咨询师', avgTime: 7, projectType: 'injection', comparison: -2.2, maxTime: 15, minTime: 3 },
+    { node: '咨询师→医生', avgTime: 10, projectType: 'injection', comparison: -4.5, maxTime: 18, minTime: 5 },
+    { node: '医生→成交', avgTime: 28, projectType: 'injection', comparison: -5.2, maxTime: 45, minTime: 15 },
+  ],
+};
+
+export const scriptData: ScriptData[] = [
+  {
+    name: '专业需求挖掘式',
+    usageCount: 328,
+    conversionRate: 42.5,
+    avgTalkTime: 18,
+  },
+  {
+    name: '效果案例展示式',
+    usageCount: 256,
+    conversionRate: 38.2,
+    avgTalkTime: 22,
+  },
+  {
+    name: '价格优势引导式',
+    usageCount: 189,
+    conversionRate: 35.6,
+    avgTalkTime: 15,
+  },
+  {
+    name: '情感关怀沟通式',
+    usageCount: 145,
+    conversionRate: 45.8,
+    avgTalkTime: 25,
+  },
+  {
+    name: '风险告知透明式',
+    usageCount: 98,
+    conversionRate: 32.1,
+    avgTalkTime: 28,
+  },
+];
+
+export const scheduleSuggestions: ScheduleSuggestion[] = [
+  {
+    timeSlot: '09:00-11:00',
+    dayOfWeek: '周六',
+    suggestedDoctors: 6,
+    suggestedConsultants: 8,
+    avgWaitTime: 28,
+  },
+  {
+    timeSlot: '14:00-16:00',
+    dayOfWeek: '周六',
+    suggestedDoctors: 5,
+    suggestedConsultants: 7,
+    avgWaitTime: 25,
+  },
+  {
+    timeSlot: '10:00-12:00',
+    dayOfWeek: '周日',
+    suggestedDoctors: 5,
+    suggestedConsultants: 7,
+    avgWaitTime: 22,
+  },
+  {
+    timeSlot: '15:00-17:00',
+    dayOfWeek: '周五',
+    suggestedDoctors: 4,
+    suggestedConsultants: 6,
+    avgWaitTime: 18,
+  },
+  {
+    timeSlot: '11:00-13:00',
+    dayOfWeek: '周三',
+    suggestedDoctors: 3,
+    suggestedConsultants: 5,
+    avgWaitTime: 12,
+  },
+];
+
+export const storeRankingData = [
+  {
+    rank: 1,
+    name: '上海浦东店',
+    newCustomers: 32,
+    conversionRate: 41.5,
+    avgWaitTime: 18,
+    dataCompleteness: 98.2,
+    score: 96.8,
+  },
+  {
+    rank: 2,
+    name: '深圳南山店',
+    newCustomers: 22,
+    conversionRate: 36.4,
+    avgWaitTime: 15,
+    dataCompleteness: 94.8,
+    score: 93.5,
+  },
+  {
+    rank: 3,
+    name: '北京朝阳店',
+    newCustomers: 28,
+    conversionRate: 38.2,
+    avgWaitTime: 22,
+    dataCompleteness: 96.5,
+    score: 92.8,
+  },
+  {
+    rank: 4,
+    name: '杭州西湖店',
+    newCustomers: 18,
+    conversionRate: 39.6,
+    avgWaitTime: 12,
+    dataCompleteness: 92.3,
+    score: 91.2,
+  },
+  {
+    rank: 5,
+    name: '武汉江汉店',
+    newCustomers: 12,
+    conversionRate: 34.5,
+    avgWaitTime: 16,
+    dataCompleteness: 91.7,
+    score: 88.6,
+  },
+  {
+    rank: 6,
+    name: '南京鼓楼店',
+    newCustomers: 16,
+    conversionRate: 31.9,
+    avgWaitTime: 20,
+    dataCompleteness: 90.2,
+    score: 85.4,
+  },
+  {
+    rank: 7,
+    name: '广州天河店',
+    newCustomers: 25,
+    conversionRate: 32.8,
+    avgWaitTime: 25,
+    dataCompleteness: 88.6,
+    score: 82.3,
+  },
+  {
+    rank: 8,
+    name: '成都锦江店',
+    newCustomers: 15,
+    conversionRate: 28.3,
+    avgWaitTime: 28,
+    dataCompleteness: 85.4,
+    score: 76.8,
+  },
+];

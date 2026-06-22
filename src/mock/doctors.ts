@@ -1,0 +1,162 @@
+import type { Doctor, Consultant, HeatmapData } from '../types';
+
+export const doctors: Doctor[] = [
+  {
+    id: '1',
+    name: '李明华',
+    storeName: '北京朝阳店',
+    specialty: '鼻整形',
+    todayPatients: 12,
+    waitingPatients: 3,
+    avgConsultationTime: 45,
+    satisfaction: 96.8,
+    returnVisitRate: 42.5,
+  },
+  {
+    id: '2',
+    name: '王建国',
+    storeName: '上海浦东店',
+    specialty: '眼整形',
+    todayPatients: 15,
+    waitingPatients: 2,
+    avgConsultationTime: 38,
+    satisfaction: 98.2,
+    returnVisitRate: 48.3,
+  },
+  {
+    id: '3',
+    name: '张伟强',
+    storeName: '广州天河店',
+    specialty: '胸整形',
+    todayPatients: 8,
+    waitingPatients: 6,
+    avgConsultationTime: 55,
+    satisfaction: 92.5,
+    returnVisitRate: 35.8,
+  },
+  {
+    id: '4',
+    name: '刘芳',
+    storeName: '深圳南山店',
+    specialty: '皮肤光电',
+    todayPatients: 18,
+    waitingPatients: 1,
+    avgConsultationTime: 28,
+    satisfaction: 97.6,
+    returnVisitRate: 55.2,
+  },
+  {
+    id: '5',
+    name: '陈晓峰',
+    storeName: '杭州西湖店',
+    specialty: '注射微整',
+    todayPatients: 20,
+    waitingPatients: 0,
+    avgConsultationTime: 22,
+    satisfaction: 99.1,
+    returnVisitRate: 62.8,
+  },
+  {
+    id: '6',
+    name: '赵雪梅',
+    storeName: '成都锦江店',
+    specialty: '形体雕塑',
+    todayPatients: 6,
+    waitingPatients: 8,
+    avgConsultationTime: 65,
+    satisfaction: 89.4,
+    returnVisitRate: 28.6,
+  },
+  {
+    id: '7',
+    name: '孙志强',
+    storeName: '武汉江汉店',
+    specialty: '鼻整形',
+    todayPatients: 9,
+    waitingPatients: 2,
+    avgConsultationTime: 42,
+    satisfaction: 94.7,
+    returnVisitRate: 39.4,
+  },
+  {
+    id: '8',
+    name: '周丽娟',
+    storeName: '南京鼓楼店',
+    specialty: '眼整形',
+    todayPatients: 11,
+    waitingPatients: 4,
+    avgConsultationTime: 35,
+    satisfaction: 95.3,
+    returnVisitRate: 44.1,
+  },
+];
+
+export const consultants: Consultant[] = [
+  {
+    id: '1',
+    name: '李梦琪',
+    storeName: '北京朝阳店',
+    todayReceptions: 25,
+    avgCommunicationTime: 18,
+    referralSuccessRate: 88.5,
+    conversionCount: 11,
+  },
+  {
+    id: '2',
+    name: '王晓雯',
+    storeName: '上海浦东店',
+    todayReceptions: 28,
+    avgCommunicationTime: 22,
+    referralSuccessRate: 92.3,
+    conversionCount: 14,
+  },
+  {
+    id: '3',
+    name: '张雅婷',
+    storeName: '广州天河店',
+    todayReceptions: 20,
+    avgCommunicationTime: 15,
+    referralSuccessRate: 78.6,
+    conversionCount: 7,
+  },
+  {
+    id: '4',
+    name: '刘思雨',
+    storeName: '深圳南山店',
+    todayReceptions: 22,
+    avgCommunicationTime: 20,
+    referralSuccessRate: 85.2,
+    conversionCount: 9,
+  },
+  {
+    id: '5',
+    name: '陈佳怡',
+    storeName: '杭州西湖店',
+    todayReceptions: 18,
+    avgCommunicationTime: 16,
+    referralSuccessRate: 90.8,
+    conversionCount: 8,
+  },
+  {
+    id: '6',
+    name: '赵美琳',
+    storeName: '成都锦江店',
+    todayReceptions: 15,
+    avgCommunicationTime: 25,
+    referralSuccessRate: 72.4,
+    conversionCount: 5,
+  },
+];
+
+const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const hours = ['08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
+
+export const heatmapData: HeatmapData[] = days.flatMap((day, dayIndex) =>
+  hours.map((hour, hourIndex) => ({
+    hour,
+    day,
+    value: hourIndex >= 2 && hourIndex <= 10
+      ? Math.floor(3 + Math.random() * 8)
+      : Math.floor(Math.random() * 4),
+  }))
+);
