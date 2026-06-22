@@ -72,6 +72,20 @@ export const categoryNodeTimeData: Record<string, NodeTimeData[]> = {
     { node: '咨询师→医生', avgTime: 10, projectType: 'injection', comparison: -4.5, maxTime: 18, minTime: 5 },
     { node: '医生→成交', avgTime: 28, projectType: 'injection', comparison: -5.2, maxTime: 45, minTime: 15 },
   ],
+  breast: [
+    { node: '签到→分诊', avgTime: 7, projectType: 'breast', comparison: 2.0, maxTime: 16, minTime: 3 },
+    { node: '分诊→问卷', avgTime: 12, projectType: 'breast', comparison: 1.5, maxTime: 25, minTime: 5 },
+    { node: '问卷→咨询师', avgTime: 18, projectType: 'breast', comparison: 4.2, maxTime: 35, minTime: 8 },
+    { node: '咨询师→医生', avgTime: 25, projectType: 'breast', comparison: 3.5, maxTime: 45, minTime: 12 },
+    { node: '医生→成交', avgTime: 62, projectType: 'breast', comparison: 8.5, maxTime: 100, minTime: 30 },
+  ],
+  'body-shaping': [
+    { node: '签到→分诊', avgTime: 6, projectType: 'body-shaping', comparison: 1.0, maxTime: 14, minTime: 3 },
+    { node: '分诊→问卷', avgTime: 10, projectType: 'body-shaping', comparison: 0.8, maxTime: 20, minTime: 4 },
+    { node: '问卷→咨询师', avgTime: 14, projectType: 'body-shaping', comparison: 2.8, maxTime: 28, minTime: 6 },
+    { node: '咨询师→医生', avgTime: 20, projectType: 'body-shaping', comparison: 2.2, maxTime: 38, minTime: 10 },
+    { node: '医生→成交', avgTime: 52, projectType: 'body-shaping', comparison: 6.8, maxTime: 85, minTime: 22 },
+  ],
 };
 
 export const scriptData: ScriptData[] = [

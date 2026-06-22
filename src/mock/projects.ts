@@ -117,4 +117,20 @@ export const categoryFunnelData: Record<string, FunnelData[]> = {
     { stage: '医生面诊', value: 88, conversionRate: 95.7 },
     { stage: '成交缴费', value: 72, conversionRate: 81.8 },
   ],
+  breast: [
+    { stage: '签到到店', value: 100, conversionRate: 100 },
+    { stage: '分诊登记', value: 93, conversionRate: 93 },
+    { stage: '风险问卷', value: 86, conversionRate: 92.5 },
+    { stage: '咨询师沟通', value: 74, conversionRate: 86.0 },
+    { stage: '医生面诊', value: 58, conversionRate: 78.4 },
+    { stage: '成交缴费', value: 28, conversionRate: 48.3 },
+  ],
+  'body-shaping': [
+    { stage: '签到到店', value: 100, conversionRate: 100 },
+    { stage: '分诊登记', value: 94, conversionRate: 94 },
+    { stage: '风险问卷', value: 88, conversionRate: 93.6 },
+    { stage: '咨询师沟通', value: 78, conversionRate: 88.6 },
+    { stage: '医生面诊', value: 64, conversionRate: 82.1 },
+    { stage: '成交缴费', value: 34, conversionRate: 53.1 },
+  ],
 };

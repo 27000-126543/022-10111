@@ -35,6 +35,8 @@ interface CompletenessIssue {
   storeName: string;
   missingFields: string[];
   missingCount: number;
+  responsiblePerson: string;
+  responsibleRole: string;
 }
 
 const RingProgress: React.FC<{ value: number; size?: number; strokeWidth?: number }> = ({
@@ -148,7 +150,7 @@ const StoreCompare: React.FC = () => {
   }, [sortField, sortOrder]);
 
   const handleExport = () => {
-    exportStoreRanking(storeRankingData, `门店排名_${new Date().toISOString().slice(0, 10)}`);
+    exportStoreRanking(storeRankingData, `门店排名_${new Date().toISOString().slice(0, 10)}`, dataCompletenessIssues);
   };
 
   const doctorBarChartData = useMemo(
@@ -369,7 +371,14 @@ const StoreCompare: React.FC = () => {
                   {issue.missingCount}项
                 </span>
                 <div className="flex-1">
-                  <div className="text-white text-sm font-medium">{issue.storeName}</div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-white text-sm font-medium">{issue.storeName}</span>
+                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <Users size={12} />
+                      负责人: <span className="text-blue-400 font-medium">{issue.responsiblePerson}</span>
+                      <span className="text-slate-600">({issue.responsibleRole})</span>
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {issue.missingFields.map((field, i) => (
                       <span key={i} className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded">

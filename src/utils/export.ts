@@ -7,6 +7,14 @@ interface ExportColumn {
   formatter?: (value: any) => string;
 }
 
+interface CompletenessIssue {
+  storeName: string;
+  missingFields: string[];
+  missingCount: number;
+  responsiblePerson: string;
+  responsibleRole: string;
+}
+
 export const exportToExcel = <T extends Record<string, any>>(
   data: T[],
   columns: ExportColumn[],
@@ -31,7 +39,23 @@ export const exportToExcel = <T extends Record<string, any>>(
   XLSX.writeFile(wb, `${fileName}.xlsx`);
 };
 
-export const exportStoreRanking = (stores: any[], fileName: string): void => {
+export const exportStoreRanking = (stores: any[], fileName: string, completenessIssues?: CompletenessIssue[]): void => {
+  const issueMap = new Map<string, CompletenessIssue>();
+  if (completenessIssues) {
+    completenessIssues.forEach((issue) => {
+      issueMap.set(issue.storeName, issue);
+    });
+  }
+
+  const enrichedData = stores.map((row: any) => {
+    const issue = issueMap.get(row.name);
+    return {
+      ...row,
+      responsiblePerson: issue ? issue.responsiblePerson : '-',
+      missingFields: issue ? issue.missingFields.join('、') : '-',
+    };
+  });
+
   const columns: ExportColumn[] = [
     { key: 'rank', title: '排名' },
     { key: 'name', title: '门店名称' },
@@ -40,9 +64,11 @@ export const exportStoreRanking = (stores: any[], fileName: string): void => {
     { key: 'avgWaitTime', title: '平均等待(分钟)' },
     { key: 'dataCompleteness', title: '资料完整率(%)', formatter: (v) => `${v}%` },
     { key: 'score', title: '综合评分', formatter: (v) => v.toFixed(1) },
+    { key: 'responsiblePerson', title: '录入负责人' },
+    { key: 'missingFields', title: '缺失资料' },
   ];
   
-  exportToExcel(stores, columns, fileName, '门店排名');
+  exportToExcel(enrichedData, columns, fileName, '门店排名');
 };
 
 export const exportWarningList = (warnings: WarningItem[], fileName: string): void => {

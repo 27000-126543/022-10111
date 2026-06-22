@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { AlertCircle, Clock, MapPin, User, ChevronRight, Bell } from 'lucide-react';
+import { AlertCircle, Clock, MapPin, User, ChevronRight, Bell, Building2, Users, TrendingUp, TrendingDown } from 'lucide-react';
 import { useDataStore } from '../store/useDataStore';
 import KpiCard from '../components/KpiCard';
 import LineChart from '../components/charts/LineChart';
@@ -15,6 +15,7 @@ const Overview: React.FC = () => {
     trendData30Days,
     selectedTimeRange,
     setSelectedTimeRange,
+    stores,
   } = useDataStore();
 
   const trendData = selectedTimeRange === '7d' ? trendData7Days : trendData30Days;
@@ -101,6 +102,60 @@ const Overview: React.FC = () => {
         {kpiData.map((kpi, index) => (
           <KpiCard key={kpi.title} data={kpi} delay={index * 200} />
         ))}
+      </div>
+
+      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-semibold flex items-center gap-2">
+            <Building2 size={18} className="text-blue-400" />
+            各门店今日初诊概览
+          </h3>
+          <span className="text-xs text-slate-400">共 {stores.length} 家门店</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          {stores.map((store) => {
+            const isRedLight = store.avgWaitTime >= 25;
+            const isWarning = store.avgWaitTime >= 20 && store.avgWaitTime < 25;
+            return (
+              <div
+                key={store.id}
+                className={`relative rounded-xl p-3 border transition-all hover:scale-105 cursor-pointer ${
+                  isRedLight
+                    ? 'bg-rose-500/10 border-rose-500/50'
+                    : isWarning
+                    ? 'bg-amber-500/10 border-amber-500/50'
+                    : 'bg-slate-800/50 border-slate-700/50'
+                }`}
+              >
+                {isRedLight && (
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                )}
+                {isWarning && (
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                )}
+                <div className="text-slate-400 text-xs font-medium truncate mb-2">{store.name.replace(/店$/, '')}</div>
+                <div className="flex items-end gap-1 mb-2">
+                  <span className="text-2xl font-bold text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {store.todayNewCustomers}
+                  </span>
+                  <span className="text-slate-500 text-xs mb-1">人</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock size={12} className={isRedLight ? 'text-rose-400' : isWarning ? 'text-amber-400' : 'text-emerald-400'} />
+                  <span className={`text-xs font-medium ${isRedLight ? 'text-rose-400' : isWarning ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {store.avgWaitTime}分钟
+                  </span>
+                </div>
+                {isRedLight && (
+                  <div className="mt-1.5 text-[10px] text-rose-400 font-medium">等待红灯</div>
+                )}
+                {isWarning && (
+                  <div className="mt-1.5 text-[10px] text-amber-400 font-medium">等待预警</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

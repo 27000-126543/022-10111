@@ -78,9 +78,10 @@ const KpiCard: React.FC<KpiCardProps> = ({ data, delay = 0 }) => {
   };
 
   const isPositive = data.trendType === 'up';
-  const isGoodTrend = 
-    (data.title.includes('量') || data.title.includes('率')) && isPositive ||
-    (data.title.includes('时长') || data.title.includes('次数')) && !isPositive;
+  const isInverseMetric = data.title.includes('时长') || data.title.includes('次数');
+  const isGoodTrend = isInverseMetric ? !isPositive : isPositive;
+
+  const trendDirectionText = isPositive ? '上升' : '下降';
 
   return (
     <div className="relative bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-slate-600/80 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 group overflow-hidden">
@@ -128,7 +129,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ data, delay = 0 }) => {
 
       <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
         <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: data.color || '#165DFF' }} />
-        <span>较昨日{isGoodTrend ? '下降' : '上升'}{isPositive ? '' : ''}</span>
+        <span>较昨日{trendDirectionText}{formatNumber(Math.abs(data.trend), 1)}%</span>
       </div>
     </div>
   );
