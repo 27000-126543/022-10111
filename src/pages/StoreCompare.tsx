@@ -11,6 +11,8 @@ import {
   ChevronUp,
   ChevronDown,
   Filter,
+  User,
+  ListTodo,
 } from 'lucide-react';
 import { Drawer, Button } from 'antd';
 import { storeRankingData } from '../mock/reports';
@@ -132,12 +134,56 @@ const StoreCompare: React.FC = () => {
   const [sortField, setSortField] = useState<SortField>('newCustomers');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [drillDownState, setDrillDownState] = useState<{ storeName: string; field: string } | null>(null);
+  const [selectedReceptionist, setSelectedReceptionist] = useState<string | null>(null);
 
-  const { stores, dataCompletenessIssues, getMissingFieldCustomers, completeMissingField } = useDataStore();
+  const { stores, dataCompletenessIssues, missingFieldCustomers, getMissingFieldCustomers, completeMissingField } = useDataStore();
 
   const drillDownCustomers = drillDownState
     ? getMissingFieldCustomers(drillDownState.storeName, drillDownState.field)
     : [];
+
+  const receptionistStats = useMemo(() => {
+    const grouped = new Map<string, {
+      name: string;
+      storeName: string;
+      total: number;
+      missing: number;
+      completed: number;
+    }>();
+
+    missingFieldCustomers.forEach((customer) => {
+      const key = customer.responsiblePerson;
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          name: customer.responsiblePerson,
+          storeName: customer.storeName,
+          total: 0,
+          missing: 0,
+          completed: 0,
+        });
+      }
+      const stat = grouped.get(key)!;
+      stat.total += 1;
+      if (customer.completed) {
+        stat.completed += 1;
+      } else {
+        stat.missing += 1;
+      }
+    });
+
+    return Array.from(grouped.values())
+      .map((stat) => ({
+        ...stat,
+        completionRate: stat.total > 0 ? (stat.completed / stat.total) * 100 : 0,
+      }))
+      .sort((a, b) => a.completionRate - b.completionRate)
+      .map((stat, index) => ({ ...stat, rank: index + 1 }));
+  }, [missingFieldCustomers]);
+
+  const selectedReceptionistCustomers = useMemo(() => {
+    if (!selectedReceptionist) return [];
+    return missingFieldCustomers.filter((c) => c.responsiblePerson === selectedReceptionist);
+  }, [selectedReceptionist, missingFieldCustomers]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -365,42 +411,116 @@ const StoreCompare: React.FC = () => {
               </div>
             ))}
           </div>
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-amber-400" />
-              缺失项提醒
-            </h4>
-            {dataCompletenessIssues.map((issue, idx) => (
-              <div
-                key={idx}
-                className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50"
-              >
-                <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs font-medium rounded">
-                  {issue.missingCount}项
-                </span>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <span className="text-white text-sm font-medium">{issue.storeName}</span>
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                      <Users size={12} />
-                      负责人: <span className="text-blue-400 font-medium">{issue.responsiblePerson}</span>
-                      <span className="text-slate-600">({issue.responsibleRole})</span>
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {issue.missingFields.map((field, i) => (
-                      <span
-                        key={i}
-                        className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded cursor-pointer hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
-                        onClick={() => setDrillDownState({ storeName: issue.storeName, field })}
-                      >
-                        {field}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-amber-400" />
+                缺失项提醒
+              </h4>
+              {dataCompletenessIssues.map((issue, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50"
+                >
+                  <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs font-medium rounded">
+                    {issue.missingCount}项
+                  </span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white text-sm font-medium">{issue.storeName}</span>
+                      <span className="flex items-center gap-1 text-xs text-slate-400">
+                        <Users size={12} />
+                        负责人: <span className="text-blue-400 font-medium">{issue.responsiblePerson}</span>
+                        <span className="text-slate-600">({issue.responsibleRole})</span>
                       </span>
-                    ))}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {issue.missingFields.map((field, i) => (
+                        <span
+                          key={i}
+                          className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded cursor-pointer hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
+                          onClick={() => setDrillDownState({ storeName: issue.storeName, field })}
+                        >
+                          {field}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                <Users size={16} className="text-blue-400" />
+                前台录入责任榜 👥
+              </h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {receptionistStats.map((stat) => (
+                  <div
+                    key={stat.name}
+                    className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 cursor-pointer hover:bg-slate-700/50 transition-colors"
+                    onClick={() => setSelectedReceptionist(stat.name)}
+                  >
+                    <span
+                      className={`inline-flex items-center justify-center w-6 h-6 rounded-md text-white text-xs font-bold ${
+                        stat.rank === 1
+                          ? 'bg-gradient-to-br from-rose-400 to-rose-600'
+                          : stat.rank === 2
+                          ? 'bg-gradient-to-br from-amber-400 to-amber-600'
+                          : stat.rank === 3
+                          ? 'bg-gradient-to-br from-emerald-400 to-emerald-600'
+                          : 'bg-slate-600'
+                      } shadow-lg`}
+                    >
+                      {stat.rank}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white text-sm font-medium truncate">{stat.name}</span>
+                        <span className="text-slate-500 text-xs truncate">· {stat.storeName}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-1 text-xs text-slate-400">
+                          <User size={12} />
+                          {stat.total}人
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-rose-400">
+                          <AlertTriangle size={12} />
+                          {stat.missing}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-emerald-400">
+                          <CheckCircle2 size={12} />
+                          {stat.completed}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${stat.completionRate}%`,
+                              background: `linear-gradient(to right, #f43f5e, #f59e0b, #10b981)`,
+                            }}
+                          />
+                        </div>
+                        <span
+                          className={`text-xs font-semibold w-10 text-right ${
+                            stat.completionRate >= 80
+                              ? 'text-emerald-400'
+                              : stat.completionRate >= 50
+                              ? 'text-amber-400'
+                              : 'text-rose-400'
+                          }`}
+                        >
+                          {stat.completionRate.toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
 
@@ -482,6 +602,97 @@ const StoreCompare: React.FC = () => {
                     </div>
                     {customer.completed ? (
                       <span className="text-slate-500 text-sm">✓已补录</span>
+                    ) : (
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={() => completeMissingField(customer.id)}
+                      >
+                        补录
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title={selectedReceptionist ? `${selectedReceptionist} - 录入缺失清单` : ''}
+        placement="right"
+        width={480}
+        open={selectedReceptionist !== null}
+        onClose={() => setSelectedReceptionist(null)}
+        styles={{
+          header: { background: '#1e293b', color: '#fff', borderBottom: '1px solid #334155' },
+          body: { background: '#0f172a', padding: 0 },
+        }}
+      >
+        {selectedReceptionist && (
+          <div className="p-4">
+            {(() => {
+              const stat = receptionistStats.find((s) => s.name === selectedReceptionist);
+              return stat ? (
+                <>
+                  <div className="flex items-center gap-2 mb-4 text-sm">
+                    <Building2 size={14} className="text-blue-400" />
+                    <span className="text-slate-400">所属门店:</span>
+                    <span className="text-blue-400 font-medium">{stat.storeName}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                      <div className="text-white font-bold text-lg" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {stat.total}
+                      </div>
+                      <div className="text-slate-400 text-xs mt-1">负责顾客</div>
+                    </div>
+                    <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                      <div className="text-rose-400 font-bold text-lg" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {stat.missing}
+                      </div>
+                      <div className="text-slate-400 text-xs mt-1">待补录</div>
+                    </div>
+                    <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                      <div className="text-emerald-400 font-bold text-lg" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {stat.completed}
+                      </div>
+                      <div className="text-slate-400 text-xs mt-1">已补录</div>
+                    </div>
+                  </div>
+                </>
+              ) : null;
+            })()}
+
+            <div className="space-y-2">
+              {selectedReceptionistCustomers.length === 0 ? (
+                <div className="text-center text-slate-500 py-8">暂无顾客数据</div>
+              ) : (
+                selectedReceptionistCustomers.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50"
+                  >
+                    <div className="flex-1">
+                      <div className="text-white text-sm font-medium">{customer.customerName}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded">
+                          {customer.missingField}
+                        </span>
+                        <span
+                          className={`text-xs ${
+                            customer.completed ? 'text-emerald-400' : 'text-amber-400'
+                          }`}
+                        >
+                          {customer.completed ? '已补录' : '待补录'}
+                        </span>
+                      </div>
+                    </div>
+                    {customer.completed ? (
+                      <span className="text-slate-500 text-sm">
+                        <CheckCircle2 size={18} className="text-emerald-500" />
+                      </span>
                     ) : (
                       <Button
                         type="primary"

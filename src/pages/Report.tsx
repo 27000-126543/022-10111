@@ -41,7 +41,7 @@ interface StoreRankingItem {
 }
 
 const Report: React.FC = () => {
-  const { selectedProjectCategory, setSelectedProjectCategory, getFunnelDataByCategory, getNodeTimeDataByCategory, doctors, consultants, compareCategoryA, compareCategoryB, setCompareCategoryA, setCompareCategoryB, getFunnelDataForCategory, getNodeTimeDataForCategory } = useDataStore();
+  const { selectedProjectCategory, setSelectedProjectCategory, getFunnelDataByCategory, getNodeTimeDataByCategory, doctors, consultants, compareCategoryA, compareCategoryB, setCompareCategoryA, setCompareCategoryB, getFunnelDataForCategory, getNodeTimeDataForCategory, stores, compareStore, setCompareStore } = useDataStore();
   const [storeRankingSortField, setStoreRankingSortField] = useState<string>('score');
   const [storeRankingSortOrder, setStoreRankingSortOrder] = useState<'ascend' | 'descend'>('descend');
 
@@ -60,6 +60,14 @@ const Report: React.FC = () => {
         .filter(([key]) => key !== 'all')
         .map(([value, label]) => ({ value: value as ProjectCategory, label })),
     []
+  );
+
+  const storeOptions = useMemo(
+    () => [
+      { value: 'all', label: '全门店汇总' },
+      ...stores.map((store) => ({ value: store.name, label: store.name })),
+    ],
+    [stores]
   );
 
   const funnelData = useMemo(() => getFunnelDataByCategory(), [selectedProjectCategory, getFunnelDataByCategory]);
@@ -82,10 +90,10 @@ const Report: React.FC = () => {
     ],
   }), [nodeTimeData]);
 
-  const compareFunnelA = useMemo(() => getFunnelDataForCategory(compareCategoryA), [compareCategoryA, getFunnelDataForCategory]);
-  const compareFunnelB = useMemo(() => getFunnelDataForCategory(compareCategoryB), [compareCategoryB, getFunnelDataForCategory]);
-  const compareNodeTimeA = useMemo(() => getNodeTimeDataForCategory(compareCategoryA), [compareCategoryA, getNodeTimeDataForCategory]);
-  const compareNodeTimeB = useMemo(() => getNodeTimeDataForCategory(compareCategoryB), [compareCategoryB, getNodeTimeDataForCategory]);
+  const compareFunnelA = useMemo(() => getFunnelDataForCategory(compareCategoryA, compareStore), [compareCategoryA, compareStore, getFunnelDataForCategory]);
+  const compareFunnelB = useMemo(() => getFunnelDataForCategory(compareCategoryB, compareStore), [compareCategoryB, compareStore, getFunnelDataForCategory]);
+  const compareNodeTimeA = useMemo(() => getNodeTimeDataForCategory(compareCategoryA, compareStore), [compareCategoryA, compareStore, getNodeTimeDataForCategory]);
+  const compareNodeTimeB = useMemo(() => getNodeTimeDataForCategory(compareCategoryB, compareStore), [compareCategoryB, compareStore, getNodeTimeDataForCategory]);
 
   const compareDiffData = useMemo(() => {
     const mapB = new Map(compareNodeTimeB.map((d: NodeTimeData) => [d.node, d.avgTime]));
@@ -439,7 +447,7 @@ const Report: React.FC = () => {
       </div>
 
       <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h3 className="text-white font-semibold flex items-center gap-2">
               <BarChart3 size={18} className="text-[#722ED1]" />
@@ -449,26 +457,40 @@ const Report: React.FC = () => {
               选择两个项目分类并排对比漏斗与节点耗时差异
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Select
-              value={compareCategoryA}
-              onChange={setCompareCategoryA}
-              options={compareOptions}
-              className="w-40"
-              size="small"
-              style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)' }}
-              popupClassName="!bg-slate-800 !border-slate-700"
-            />
-            <span className="text-slate-500 text-sm">VS</span>
-            <Select
-              value={compareCategoryB}
-              onChange={setCompareCategoryB}
-              options={compareOptions}
-              className="w-40"
-              size="small"
-              style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)' }}
-              popupClassName="!bg-slate-800 !border-slate-700"
-            />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 text-sm">门店范围:</span>
+              <Select
+                value={compareStore}
+                onChange={setCompareStore}
+                options={storeOptions}
+                className="w-40"
+                size="small"
+                style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)' }}
+                popupClassName="!bg-slate-800 !border-slate-700"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Select
+                value={compareCategoryA}
+                onChange={setCompareCategoryA}
+                options={compareOptions}
+                className="w-40"
+                size="small"
+                style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)' }}
+                popupClassName="!bg-slate-800 !border-slate-700"
+              />
+              <span className="text-slate-500 text-sm">VS</span>
+              <Select
+                value={compareCategoryB}
+                onChange={setCompareCategoryB}
+                options={compareOptions}
+                className="w-40"
+                size="small"
+                style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)' }}
+                popupClassName="!bg-slate-800 !border-slate-700"
+              />
+            </div>
           </div>
         </div>
 

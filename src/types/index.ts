@@ -42,6 +42,7 @@ export interface StoreCustomer {
   status: 'normal' | 'warning' | 'danger';
   consultant: string;
   nextStep: string;
+  note?: string;
 }
 
 export interface MissingFieldCustomer {

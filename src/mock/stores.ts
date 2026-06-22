@@ -92,9 +92,9 @@ export const stores: Store[] = [
 ];
 
 export const dataCompletenessIssues = [
-  { storeName: '成都锦江店', missingFields: ['联系方式', '既往病史', '过敏史'], missingCount: 12, responsiblePerson: '周小琳', responsibleRole: '前台' },
-  { storeName: '广州天河店', missingFields: ['术前照片', '咨询记录'], missingCount: 8, responsiblePerson: '吴雨晴', responsibleRole: '前台' },
-  { storeName: '南京鼓楼店', missingFields: ['风险问卷', '知情同意书'], missingCount: 5, responsiblePerson: '郑思怡', responsibleRole: '前台' },
+  { storeName: '成都锦江店', missingFields: ['联系方式', '既往病史', '过敏史'], missingCount: 5, responsiblePerson: '周小琳', responsibleRole: '前台' },
+  { storeName: '广州天河店', missingFields: ['术前照片', '咨询记录'], missingCount: 3, responsiblePerson: '吴雨晴', responsibleRole: '前台' },
+  { storeName: '南京鼓楼店', missingFields: ['风险问卷', '知情同意书'], missingCount: 2, responsiblePerson: '郑思怡', responsibleRole: '前台' },
 ];
 
 export const storeCustomers: StoreCustomer[] = [

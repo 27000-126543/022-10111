@@ -52,19 +52,24 @@ interface DataState {
   selectedProjectCategory: ProjectCategory;
   compareCategoryA: ProjectCategory;
   compareCategoryB: ProjectCategory;
+  compareStore: string | 'all';
   
   setSelectedTimeRange: (range: '7d' | '30d') => void;
   setSelectedProjectCategory: (category: ProjectCategory) => void;
   setCompareCategoryA: (category: ProjectCategory) => void;
   setCompareCategoryB: (category: ProjectCategory) => void;
+  setCompareStore: (store: string | 'all') => void;
   updateWarningStatus: (id: string, status: WarningItem['status']) => void;
   getFunnelDataByCategory: () => typeof funnelData;
   getNodeTimeDataByCategory: () => typeof nodeTimeData;
-  getFunnelDataForCategory: (category: ProjectCategory) => typeof funnelData;
-  getNodeTimeDataForCategory: (category: ProjectCategory) => typeof nodeTimeData;
+  getFunnelDataForCategory: (category: ProjectCategory, store?: string | 'all') => typeof funnelData;
+  getNodeTimeDataForCategory: (category: ProjectCategory, store?: string | 'all') => typeof nodeTimeData;
   completeMissingField: (id: string) => void;
   getStoreCustomers: (storeName: string) => typeof storeCustomers;
   getMissingFieldCustomers: (storeName: string, field: string) => MissingFieldCustomer[];
+  markCustomerAsSeen: (customerId: string) => void;
+  reassignCustomer: (customerId: string, consultant: string) => void;
+  addCustomerNote: (customerId: string, note: string) => void;
 }
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -99,11 +104,13 @@ export const useDataStore = create<DataState>((set, get) => ({
   selectedProjectCategory: 'all',
   compareCategoryA: 'breast',
   compareCategoryB: 'body-shaping',
+  compareStore: 'all',
   
   setSelectedTimeRange: (range) => set({ selectedTimeRange: range }),
   setSelectedProjectCategory: (category) => set({ selectedProjectCategory: category }),
   setCompareCategoryA: (category) => set({ compareCategoryA: category }),
   setCompareCategoryB: (category) => set({ compareCategoryB: category }),
+  setCompareStore: (store) => set({ compareStore: store }),
   
   updateWarningStatus: (id, status) =>
     set((state) => ({
@@ -130,54 +137,108 @@ export const useDataStore = create<DataState>((set, get) => ({
     return categoryNodeTimeData[selectedProjectCategory] || nodeTimeData;
   },
 
-  getFunnelDataForCategory: (category: ProjectCategory) => {
-    const { funnelData, categoryFunnelData } = get();
-    if (category === 'all') return funnelData;
-    return categoryFunnelData[category] || funnelData;
+  getFunnelDataForCategory: (category: ProjectCategory, store: string | 'all' = 'all') => {
+    const { funnelData, categoryFunnelData, stores } = get();
+    let data = category === 'all' ? funnelData : (categoryFunnelData[category] || funnelData);
+    
+    if (store !== 'all') {
+      const storeInfo = stores.find((s) => s.name === store);
+      if (storeInfo) {
+        const avgConversionRate = stores.reduce((sum, s) => sum + s.conversionRate, 0) / stores.length;
+        const factor = storeInfo.conversionRate / avgConversionRate;
+        data = data.map((item) => ({
+          ...item,
+          value: Math.round(item.value * factor),
+          conversionRate: Math.min(100, Math.max(0, item.conversionRate * factor)),
+        }));
+      }
+    }
+    
+    return data;
   },
 
-  getNodeTimeDataForCategory: (category: ProjectCategory) => {
-    const { nodeTimeData, categoryNodeTimeData } = get();
-    if (category === 'all') return nodeTimeData;
-    return categoryNodeTimeData[category] || nodeTimeData;
+  getNodeTimeDataForCategory: (category: ProjectCategory, store: string | 'all' = 'all') => {
+    const { nodeTimeData, categoryNodeTimeData, stores } = get();
+    let data = category === 'all' ? nodeTimeData : (categoryNodeTimeData[category] || nodeTimeData);
+    
+    if (store !== 'all') {
+      const storeInfo = stores.find((s) => s.name === store);
+      if (storeInfo) {
+        const avgWaitTime = stores.reduce((sum, s) => sum + s.avgWaitTime, 0) / stores.length;
+        const factor = storeInfo.avgWaitTime / avgWaitTime;
+        data = data.map((item) => ({
+          ...item,
+          avgTime: item.avgTime * factor,
+          maxTime: item.maxTime * factor,
+          minTime: item.minTime * factor,
+        }));
+      }
+    }
+    
+    return data;
   },
 
   completeMissingField: (id: string) => {
     set((state) => {
-      const updated = state.missingFieldCustomers.map((c) =>
+      const targetCustomer = state.missingFieldCustomers.find((c) => c.id === id);
+      if (!targetCustomer || targetCustomer.completed) return state;
+
+      const updatedCustomers = state.missingFieldCustomers.map((c) =>
         c.id === id ? { ...c, completed: true } : c
       );
-      const storeFieldCount = new Map<string, number>();
-      updated.forEach((c) => {
+
+      const storeFieldUnfinished = new Map<string, number>();
+      updatedCustomers.forEach((c) => {
         if (!c.completed) {
           const key = `${c.storeName}__${c.missingField}`;
-          storeFieldCount.set(key, (storeFieldCount.get(key) || 0) + 1);
+          storeFieldUnfinished.set(key, (storeFieldUnfinished.get(key) || 0) + 1);
         }
       });
+
+      const storeTotalMissing = new Map<string, number>();
+      state.missingFieldCustomers.forEach((c) => {
+        storeTotalMissing.set(c.storeName, (storeTotalMissing.get(c.storeName) || 0) + 1);
+      });
+
+      const storeUnfinishedCount = new Map<string, number>();
+      updatedCustomers.forEach((c) => {
+        if (!c.completed) {
+          storeUnfinishedCount.set(c.storeName, (storeUnfinishedCount.get(c.storeName) || 0) + 1);
+        }
+      });
+
       const newIssues = state.dataCompletenessIssues.map((issue) => {
         const remainingFields = issue.missingFields.filter((field) => {
           const key = `${issue.storeName}__${field}`;
-          return (storeFieldCount.get(key) || 0) > 0;
+          return (storeFieldUnfinished.get(key) || 0) > 0;
         });
-        const completedCount = issue.missingFields.length - remainingFields.length;
+        const totalUnfinished = remainingFields.reduce((sum, field) => {
+          const key = `${issue.storeName}__${field}`;
+          return sum + (storeFieldUnfinished.get(key) || 0);
+        }, 0);
         return {
           ...issue,
           missingFields: remainingFields,
-          missingCount: Math.max(0, issue.missingCount - completedCount),
+          missingCount: totalUnfinished,
         };
       }).filter((issue) => issue.missingFields.length > 0);
 
+      const targetStoreName = targetCustomer.storeName;
+      const totalMissingForStore = storeTotalMissing.get(targetStoreName) || 1;
+      const unfinishedForStore = storeUnfinishedCount.get(targetStoreName) || 0;
+      const completedForStore = totalMissingForStore - unfinishedForStore;
+
       const updatedStores = state.stores.map((store) => {
-        const storeIssues = newIssues.filter((i) => i.storeName === store.name);
-        if (storeIssues.length === 0) {
-          const original = stores.find((s) => s.id === store.id);
-          return { ...store, dataCompleteness: Math.min(100, original ? original.dataCompleteness + 5 : store.dataCompleteness) };
-        }
-        return store;
+        if (store.name !== targetStoreName) return store;
+        const original = stores.find((s) => s.id === store.id);
+        const originalRate = original ? original.dataCompleteness : store.dataCompleteness;
+        const improvementPerRecord = (100 - originalRate) / totalMissingForStore;
+        const newRate = Math.min(100, originalRate + improvementPerRecord * completedForStore);
+        return { ...store, dataCompleteness: Math.round(newRate * 10) / 10 };
       });
 
       return {
-        missingFieldCustomers: updated,
+        missingFieldCustomers: updatedCustomers,
         dataCompletenessIssues: newIssues,
         stores: updatedStores,
       };
@@ -192,5 +253,76 @@ export const useDataStore = create<DataState>((set, get) => ({
     return get().missingFieldCustomers.filter(
       (c) => c.storeName === storeName && c.missingField === field && !c.completed
     );
+  },
+
+  markCustomerAsSeen: (customerId: string) => {
+    set((state) => {
+      const targetCustomer = state.storeCustomers.find((c) => c.id === customerId);
+      if (!targetCustomer) return state;
+
+      const updatedStoreCustomers = state.storeCustomers.map((c) =>
+        c.id === customerId
+          ? { ...c, status: 'normal' as const, waitTime: 0, nextStep: '已接诊' }
+          : c
+      );
+
+      const updatedWaitingCustomers = state.waitingCustomers.filter(
+        (c) => c.id !== customerId
+      );
+
+      const storeName = targetCustomer.storeName;
+      const storeCustomersAfter = updatedStoreCustomers.filter((c) => c.storeName === storeName);
+      const totalWaitTime = storeCustomersAfter.reduce((sum, c) => sum + c.waitTime, 0);
+      const avgWaitTime = storeCustomersAfter.length > 0
+        ? Math.round(totalWaitTime / storeCustomersAfter.length)
+        : 0;
+
+      const updatedStores = state.stores.map((store) =>
+        store.name === storeName
+          ? { ...store, avgWaitTime }
+          : store
+      );
+
+      return {
+        storeCustomers: updatedStoreCustomers,
+        waitingCustomers: updatedWaitingCustomers,
+        stores: updatedStores,
+      };
+    });
+  },
+
+  reassignCustomer: (customerId: string, consultant: string) => {
+    set((state) => {
+      const updatedStoreCustomers = state.storeCustomers.map((c) =>
+        c.id === customerId
+          ? { ...c, consultant }
+          : c
+      );
+
+      const updatedWaitingCustomers = state.waitingCustomers.map((c) =>
+        c.id === customerId
+          ? { ...c, consultant }
+          : c
+      );
+
+      return {
+        storeCustomers: updatedStoreCustomers,
+        waitingCustomers: updatedWaitingCustomers,
+      };
+    });
+  },
+
+  addCustomerNote: (customerId: string, note: string) => {
+    set((state) => {
+      const updatedStoreCustomers = state.storeCustomers.map((c) =>
+        c.id === customerId
+          ? { ...c, note }
+          : c
+      );
+
+      return {
+        storeCustomers: updatedStoreCustomers,
+      };
+    });
   },
 }));

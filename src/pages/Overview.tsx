@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Drawer } from 'antd';
-import { AlertCircle, Clock, MapPin, User, ChevronRight, Bell, Building2, Users, TrendingUp, TrendingDown, X, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Clock, MapPin, User, ChevronRight, Bell, Building2, Users, TrendingUp, TrendingDown, X, CheckCircle2, CheckCircle, RefreshCw, MessageSquare } from 'lucide-react';
 import { useDataStore } from '../store/useDataStore';
 import KpiCard from '../components/KpiCard';
 import LineChart from '../components/charts/LineChart';
@@ -19,6 +19,9 @@ const Overview: React.FC = () => {
     stores,
     storeCustomers,
     getStoreCustomers,
+    markCustomerAsSeen,
+    reassignCustomer,
+    addCustomerNote,
   } = useDataStore();
 
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
@@ -46,6 +49,11 @@ const Overview: React.FC = () => {
     [trendData]
   );
 
+  const currentStoreCustomers = useMemo(() => {
+    if (!selectedStore) return [];
+    return storeCustomers.filter((c) => c.storeName === selectedStore);
+  }, [storeCustomers, selectedStore]);
+
   const getStatusStyles = (status: string) => {
     const styles: Record<string, { bg: string; border: string; pulse: string; text: string }> = {
       danger: {
@@ -68,6 +76,24 @@ const Overview: React.FC = () => {
       },
     };
     return styles[status] || styles.normal;
+  };
+
+  const handleMarkAsSeen = (customerId: string) => {
+    markCustomerAsSeen(customerId);
+  };
+
+  const handleReassign = (customerId: string, currentConsultant: string) => {
+    const newConsultant = window.prompt('请输入新咨询师姓名：', currentConsultant);
+    if (newConsultant && newConsultant.trim()) {
+      reassignCustomer(customerId, newConsultant.trim());
+    }
+  };
+
+  const handleAddNote = (customerId: string) => {
+    const note = window.prompt('请输入备注内容：');
+    if (note && note.trim()) {
+      addCustomerNote(customerId, note.trim());
+    }
   };
 
   return (
@@ -300,14 +326,14 @@ const Overview: React.FC = () => {
               <Building2 size={18} className="text-blue-400" />
               <span className="text-white font-semibold">{selectedStore}</span>
               <span className="text-slate-400 text-sm font-normal">
-                今日初诊 {getStoreCustomers(selectedStore).length} 人
+                今日初诊 {currentStoreCustomers.length} 人
               </span>
             </div>
           ) : null
         }
       >
         {selectedStore && (() => {
-          const customers = getStoreCustomers(selectedStore);
+          const customers = currentStoreCustomers;
           const dangerList = customers.filter((c) => c.status === 'danger');
           const warningList = customers.filter((c) => c.status === 'warning');
           const normalList = customers.filter((c) => c.status === 'normal');
@@ -372,6 +398,38 @@ const Overview: React.FC = () => {
                               <ChevronRight size={11} className="text-slate-500" />
                               <span className="text-slate-400">{customer.nextStep}</span>
                             </div>
+                          </div>
+                          {customer.note && (
+                            <div className="mt-3 p-2 rounded-lg bg-slate-700/30 border border-slate-600/30">
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+                                <MessageSquare size={11} />
+                                <span>备注</span>
+                              </div>
+                              <p className="text-xs text-slate-300">{customer.note}</p>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-end gap-1 mt-3">
+                            <button
+                              onClick={() => handleMarkAsSeen(customer.id)}
+                              className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                              title="标记已接诊"
+                            >
+                              <CheckCircle size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleReassign(customer.id, customer.consultant)}
+                              className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+                              title="转派咨询师"
+                            >
+                              <RefreshCw size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleAddNote(customer.id)}
+                              className="p-1.5 rounded-lg bg-slate-600/30 text-slate-400 hover:bg-slate-600/50 transition-colors"
+                              title="备注卡点原因"
+                            >
+                              <MessageSquare size={14} />
+                            </button>
                           </div>
                         </div>
                       ))}
